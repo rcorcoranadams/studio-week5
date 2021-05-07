@@ -46,7 +46,7 @@
   <div id="instructions">
     <h1> Water Access at the Zaatari Refugee Camp </h1>
     <h3>🚰 Instructions 🚰</h3>
-    <p>Click anywhere on the map to see water sites within a 500m radius.
+    <p>Click anywhere on the map to see water sites within a 500m radius. Stand alone water sites will be highlighted in red.</p>
   </div>
   <script>
     // Data showing water points - replace the dummy URL with your own.
@@ -65,81 +65,89 @@
 
 
       //Map layers go in here!
-      map.addLayer({
-        id: 'OSM-water',
-        source: {
-          type: 'geojson',
-          data: url
-        },
-        type: 'circle',
-        paint: {
-          'circle-color': '#55A3D6', //blue
-          'circle-radius': 4,
-          'circle-opacity': 1,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#A0BBCB',
-        }
-      });
-      map.addLayer({
-        id: 'selected-water',
-        source: {
-          type: 'geojson',
-          data: { "type": "FeatureCollection", "features": [] }
-        },
-        type: 'circle',
-        paint: {
-          'circle-color': '#E98D89', //red
-          'circle-radius': 4
-           }
-      });
-      // Draw the search radius on the map
-      map.addLayer({
-        id: 'search-radius',
-        source: {
-          type: 'geojson',
-          data: { "type": "FeatureCollection", "features": [] }
-        },
-        type: 'line',
-        paint: {
-          'line-color': '#B080DE',
-          'line-dasharray': [8,2],
-          'line-width': 5,
-          'line-opacity': 0.7
-        }
-      });
-
-
-    // click event
-  map.on('click', function(e) {
-        var eventLngLat = [e.lngLat.lng, e.lngLat.lat];
-        //console.log(eventLngLat)
-        var searchRadius = makeRadius(eventLngLat, 500);
-        map.getSource('search-radius').setData(searchRadius);
-        var featuresInBuffer = spatialJoin('OSM-water', searchRadius);
-        map.getSource('selected-water').setData(turf.featureCollection(featuresInBuffer));
-      });
-    //mkae radius
-    function makeRadius(lngLatArray, radiusInMeters) {
-      var point = turf.point(lngLatArray);
-      var buffered = turf.buffer(point, radiusInMeters, { units: 'meters' });
-      return buffered;
+      // Map layers go here!
+  map.addLayer({
+    id: 'OSM-water',
+    source: {
+      type: 'geojson',
+      data: url
+    },
+    type: 'circle',
+    paint: {
+      'circle-color': '#83e8fc',
+      'circle-radius': 3,
+      'circle-opacity': 1,
+      'circle-stroke-width': 1,
+      'circle-stroke-color': '#0557fa',
     }
+  });
 
-    //spatialJoin function goes here!
-    function spatialJoin(sourceLayer, filterFeature) {
-    // Need this line to specify the array since map.getSource in the click event doesn't do this.
-      sourceGeoJSON = map.querySourceFeatures(sourceLayer);
-    // Loop through all the features in the source geojson and return the ones that
-    // are inside the filter feature (buffered radius) and are confirmed landing sites
-      var joined = sourceGeoJSON.filter(function (feature) {
-        return turf.booleanPointInPolygon(feature, filterFeature) && feature.properties.type === 'Free_standing';
-    });
+  // When the map has finished loading, add a new layer that will be empty
+  // at first, but will eventually house our confirmed water sites.
+  map.addLayer({
+    id: 'selected-water',
+    source: {
+      type: 'geojson',
+      data: { "type": "FeatureCollection", "features": [] }
+    },
+    type: 'circle',
+    paint: {
+      'circle-color': 'red',
+      'circle-radius': 3
+       }
+  });
 
-      return joined;
+  // Draw the search radius on the map
+  map.addLayer({
+    id: 'search-radius',
+    source: {
+      type: 'geojson',
+      data: { "type": "FeatureCollection", "features": [] }
+    },
+    type: 'fill',
+    paint: {
+      'fill-color': '#fcf683',
+      'fill-opacity': 0.5
+    }
+  });
+
+  //Click event captures lat long at click location
+  map.on('click', function(e) {
+    var eventLngLat = [e.lngLat.lng, e.lngLat.lat];
+    var searchRadius = makeRadius(eventLngLat, 500);
+    map.getSource('search-radius').setData(searchRadius);
+    var featuresInBuffer = spatialJoin('OSM-water', searchRadius);
+    map.getSource('selected-water').setData(turf.featureCollection(featuresInBuffer));
+    /*console.log(eventLngLat)*/
+  });
+
+});
+
+//makeRadius function to create a defined search area around the clicked point
+function makeRadius (lngLatArray, radiusInMeters){
+  var point = turf.point(lngLatArray)
+  var buffered = turf.buffer(point, radiusInMeters, { units: 'meters'});
+  return buffered;
 };
 
-  });
-  </script>
+
+//spatialJoin function goes here!
+function spatialJoin(sourceLayer, filterFeature) {
+// This should work as long as you are querying features within or near the viewport.
+// You could also load the GeoJSON using axios, or `fetch()` and then filter that.
+// requires an array [ ]
+// See https://github.com/mapbox/mapbox-gl-js/issues/8333 for more info
+sourceGeoJSON = map.querySourceFeatures(sourceLayer);
+// Loop through all the features in the source geojson and return the ones that
+// are inside the filter feature (buffered radius) and are confirmed landing sites
+var joined = sourceGeoJSON.filter(function (feature) {
+return turf.booleanPointInPolygon(feature, filterFeature) && feature.properties.type === 'Free_standing';
+});
+
+return joined;
+};
+
+</script>
 
 </body>
 
